@@ -1,0 +1,48 @@
+version: "3.5"
+services:
+    mysql:
+      image: mysql:8.0
+      container_name: ${DOCKER_CONTAINER_PREFIX}-mysql
+      working_dir: /application
+      volumes:
+        - .:/application:delegated
+        - ~/.composer/docker-cache/:/root/.composer:delegated
+      environment:
+        MYSQL_ALLOW_EMPTY_PASSWORD: "true"
+        MYSQL_DATABASE: LibraryManagementDb
+      ports:
+        - "${MYSQL_EXTERNAL_PORT}:3306"
+      networks:
+        - default
+      restart: unless-stopped
+
+    webserver:
+      build: _docker/nginx
+      container_name: ${DOCKER_CONTAINER_PREFIX}-webserver
+      working_dir: /application
+      volumes:
+          - .:/application:delegated
+          - ./_docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:delegated
+      ports:
+       - "${NGINX_EXTERNAL_HTTP_PORT}:80"
+      expose:
+        - "9000"
+      networks:
+        - default
+      restart: unless-stopped
+
+    php-fpm:
+      build: _docker/php-fpm
+      container_name: ${DOCKER_CONTAINER_PREFIX}-php-fpm
+      working_dir: /application
+      volumes:
+        - .:/application:delegated
+        - ./_docker/php-fpm/php-ini-overrides.ini:/usr/local/etc/php/conf.d/99-overrides.ini:delegated
+        - ./_docker/php-fpm/www.conf:/usr/local/etc/php-fpm.d/www.conf:delegated
+        - ~/.composer/docker-cache/:/root/.composer:delegated
+      networks:
+        - default
+      environment:
+          PHP_IDE_CONFIG: "serverName=${DOCKER_CONTAINER_PREFIX}"
+      restart: unless-stopped
+
